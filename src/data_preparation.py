@@ -1,0 +1,77 @@
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+
+import sys
+if __name__ == "__main__" and (Path.cwd() / "src").exists():
+    # ensure project root is on sys.path when run as a script
+    sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from src.utils_io import load_filtered, save_processed
+
+def handle_time(df):
+    # Extract year, month, and day from date of accident
+    df["DT_ACCDN"] = pd.to_datetime(df["DT_ACCDN"], errors="coerce")
+    df["year"] = df["DT_ACCDN"].dt.year
+    df["month"] = df["DT_ACCDN"].dt.month
+    df["day"] = df["DT_ACCDN"].dt.day
+
+    # Get weekday
+    day_map = {
+    "LU": 0,  # Lundi - Monday
+    "MA": 1,  # Mardi - Tuesday
+    "ME": 2,  # Mercredi - Wednesday
+    "JE": 3,  # Jeudi - Thursday
+    "VE": 4,  # Vendredi - Friday
+    "SA": 5,  # Samedi - Saturday
+    "DI": 6   # Dimanche - Sunday
+    }
+    
+    df["weekday"] = df["JR_SEMN_ACCDN"].map(day_map)
+    df["is_weekend"] = (df["weekday"] >= 5).astype(int)
+
+    # Rush hour flag
+    df["is_rush_hour"] = df["hour"].between(7, 9) | df["hour"].between(15, 18)
+    df["is_rush_hour"] = df["is_rush_hour"].fillna(False).astype(int)
+
+    return df
+
+
+def missing_data(df):
+
+    # Get rid of any records missing GRAVITE
+    df = df[df["GRAVITE"].notna()].copy()
+
+    # For map later on: Get rid of missing coordinates and convert coordinates to num
+    for coord in ["LOC_LAT", "LOC_LONG"]:
+        if coord in df.columns:
+            df[coord] = pd.to_numeric(df[coord], errors="coerce")
+    if {"LOC_LAT", "LOC_LONG"}.issubset(df.columns):
+        df = df.dropna(subset=["LOC_LAT", "LOC_LONG"])
+
+    # For columns consisting of counts, make sure there's a 0 if value dne
+    count_cols = [c for c in df.columns if c.startswith("NB_")]
+    for c in count_cols:
+        if c in df.columns:
+            df[c] = df[c].fillna(0).astype(int)
+
+    # Set missing hour to median
+    if "hour" in df.columns:
+        med = df["hour"].median()
+        if pd.notna(med):
+            df["hour"] = df["hour"].fillna(med).astype(int)
+        else:
+            df["hour"] = df["hour"].fillna(0).astype(int)  # fallback
+
+    # Categorical columns: fill with "N/A"
+    cat_candidates = [
+        "CD_CATEG_ROUTE", "CD_SIT_PRTCE_ACCDN",
+        "CD_COND_METEO", "CD_ETAT_SURFC", "CD_ECLRM",
+        "CD_ENVRN_ACCDN", "CD_GENRE_ACCDN", "JR_SEMN_ACCDN"
+    ]
+    cat_cols = [c for c in cat_candidates if c in df.columns]
+    for c in cat_cols:
+        df[c] = df[c].astype("string").fillna("N/A")
+
+    return df
