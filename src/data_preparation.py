@@ -40,6 +40,9 @@ def handle_time(df):
     # Rush hour flag
     df["is_rush_hour"] = df["hour"].between(7, 9) | df["hour"].between(15, 18)
     df["is_rush_hour"] = df["is_rush_hour"].fillna(False).astype(int)
+    
+    # drop the unnecessary date/time variables now so they don't cause issues when running model
+    df = df.drop(columns=["DT_ACCDN", "HEURE_ACCDN", "JR_SEMN_ACCDN"], errors="ignore")
 
     return df
 
@@ -103,11 +106,11 @@ def main():
     # Target variable
     'GRAVITE',
     # Casualty counts
-    'NB_MORTS', 'NB_BLESSES_GRAVES', 'NB_BLESSES_LEGERS',
-    'NB_VICTIMES_TOTAL',
-    'NB_DECES_PIETON', 'NB_BLESSES_PIETON', 'NB_VICTIMES_PIETON',
-    'NB_DECES_MOTO', 'NB_BLESSES_MOTO', 'NB_VICTIMES_MOTO',
-    'NB_DECES_VELO', 'NB_BLESSES_VELO', 'NB_VICTIMES_VELO',
+    # 'NB_MORTS', 'NB_BLESSES_GRAVES', 'NB_BLESSES_LEGERS',
+    # 'NB_VICTIMES_TOTAL',
+    # 'NB_DECES_PIETON', 'NB_BLESSES_PIETON', 'NB_VICTIMES_PIETON',
+    # 'NB_DECES_MOTO', 'NB_BLESSES_MOTO', 'NB_VICTIMES_MOTO',
+    # 'NB_DECES_VELO', 'NB_BLESSES_VELO', 'NB_VICTIMES_VELO',
 
     # Time features
     'DT_ACCDN', 'JR_SEMN_ACCDN', "HEURE_ACCDN",
@@ -127,6 +130,13 @@ def main():
 
     # Save df
     save_processed(df)
+
+    # print(df.shape)
+
+    # check variables types
+    # pd.set_option('display.max_rows', None)
+    # print("\nData types:\n", df.dtypes)
+    # pd.reset_option('display.max_rows') 
 
 if __name__ == "__main__":
     main()
