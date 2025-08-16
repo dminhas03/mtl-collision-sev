@@ -2,6 +2,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
+import matplotlib.pyplot as plt
+import seaborn as sns
+import osmnx as ox
 
 
 import sys
@@ -10,6 +13,8 @@ if __name__ == "__main__" and (Path.cwd() / "src").exists():
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.utils_io import load_raw, save_processed
+
+
 
 def handle_time(df):
     # Extract year, month, and day from date of accident
@@ -40,6 +45,8 @@ def handle_time(df):
     # Rush hour flag
     df["is_rush_hour"] = df["hour"].between(7, 9) | df["hour"].between(15, 18)
     df["is_rush_hour"] = df["is_rush_hour"].fillna(False).astype(int)
+
+    df['season'] = df['month'] % 12 // 3 + 1  # 1=winter, 2=spring, ...
     
     # drop the unnecessary date/time variables now so they don't cause issues when running model
     df = df.drop(columns=["DT_ACCDN", "HEURE_ACCDN", "JR_SEMN_ACCDN"], errors="ignore")
@@ -47,47 +54,43 @@ def handle_time(df):
     return df
 
 
+
+
 def missing_data(df):
-
-    # Get rid of any records missing GRAVITE
-    df = df[df["GRAVITE"].notna()].copy()
-
     # For map later on: Get rid of missing coordinates and convert coordinates to num
     for coord in ["LOC_LAT", "LOC_LONG"]:
         if coord in df.columns:
-            df[coord] = pd.to_numeric(df[coord], errors="coerce")
+            df.loc[:, coord] = pd.to_numeric(df[coord], errors="coerce")
     if {"LOC_LAT", "LOC_LONG"}.issubset(df.columns):
-        df = df.dropna(subset=["LOC_LAT", "LOC_LONG"])
+        df = df.dropna(subset=["LOC_LAT", "LOC_LONG"]).copy()
 
     # For columns consisting of counts, make sure there's a 0 if value dne
     count_cols = [c for c in df.columns if c.startswith("NB_")]
     for c in count_cols:
         if c in df.columns:
-            df[c] = df[c].fillna(0).astype(int)
+            df.loc[:, c] = df[c].fillna(0).astype(int)
 
-    # Set missing hour to median
+    # use median for missing hour
     if "hour" in df.columns:
         med = df["hour"].median()
-        if pd.notna(med):
-            df["hour"] = df["hour"].fillna(med).astype(int)
-        else:
-            df["hour"] = df["hour"].fillna(0).astype(int)  # If median doesn't exist, set 0
+        fill_val = int(med) if pd.notna(med) else 0
+        df.loc[:, "hour"] = df["hour"].fillna(fill_val).astype(int)
+
+    # Day/Night flag
+    df.loc[:, "is_night"] = ((df["hour"] < 6) | (df["hour"] > 20)).astype(int)
 
     # Categorical columns: fill with "N/A"
-    cat_candidates = [
-        "CD_CATEG_ROUTE", "CD_SIT_PRTCE_ACCDN",
-        "CD_COND_METEO", "CD_ETAT_SURFC", "CD_ECLRM",
-        "CD_ENVRN_ACCDN", "CD_GENRE_ACCDN", "JR_SEMN_ACCDN"
-    ]
-    cat_cols = [c for c in cat_candidates if c in df.columns]
-    for c in cat_cols:
-        df[c] = df[c].astype("string").fillna("N/A")
-
+    for c in df.columns:
+        if pd.api.types.is_object_dtype(df[c]) or pd.api.types.is_string_dtype(df[c]):
+            df.loc[:, c] = df[c].astype("string").fillna("N/A")
     return df
+
+
+
 
 def encode(df):
     cat_cols = df.select_dtypes(include=["object", "string", "category"]).columns.tolist()
-    cat_cols = [c for c in cat_cols if c not in ["GRAVITE", "JR_SEMN_ACCDN", "HEURE_ACCDN"]]
+    cat_cols = [c for c in cat_cols if c not in ["JR_SEMN_ACCDN", "HEURE_ACCDN"]]
 
     enc = OneHotEncoder(drop="first", sparse_output=False, handle_unknown="ignore")
     enc_arr = enc.fit_transform(df[cat_cols])
@@ -97,21 +100,15 @@ def encode(df):
     return df
 
 
+
+
+
 def main():
     # Load raw data into dataframe
-    df = load_raw()
+    accidents = load_raw()
     
-    # Columns we want to keep:
+    # Columns we want to keep. 
     keep_cols = [
-    # Target variable
-    'GRAVITE',
-    # Casualty counts
-    # 'NB_MORTS', 'NB_BLESSES_GRAVES', 'NB_BLESSES_LEGERS',
-    # 'NB_VICTIMES_TOTAL',
-    # 'NB_DECES_PIETON', 'NB_BLESSES_PIETON', 'NB_VICTIMES_PIETON',
-    # 'NB_DECES_MOTO', 'NB_BLESSES_MOTO', 'NB_VICTIMES_MOTO',
-    # 'NB_DECES_VELO', 'NB_BLESSES_VELO', 'NB_VICTIMES_VELO',
-
     # Time features
     'DT_ACCDN', 'JR_SEMN_ACCDN', "HEURE_ACCDN",
 
@@ -121,22 +118,43 @@ def main():
     # Environment and context
     'CD_COND_METEO', 'CD_ETAT_SURFC', 'CD_ECLRM', 'CD_ENVRN_ACCDN', 'CD_GENRE_ACCDN'
     ]
-    df = df[keep_cols].copy()
+    accidents = accidents[keep_cols].copy()
 
-    # Apply methods
-    df = handle_time(df)
-    df = missing_data(df)
-    df = encode(df)
+    accidents = handle_time(accidents)
+    accidents = missing_data(accidents)
+    accidents = encode(accidents)
+
+    print("\nAccidents: ", accidents.shape)
+    print(accidents.head(5))
+
+
+    ###################################################################
+    #################### GENERATING NEGATIVE CASES ####################
+    ###################################################################
+    # We want ourmodel to predict accidents but the above dataset only contains accidents so we need to create no accident data
+    # For coordinates we can use osmnx to get graph of Montreal's street network. 
+    # From said graph we can get latitude and longitude of each node and from there we pick however many points we want.    
+    # neg =  pd.DataFrame(columns=('LOC_LAT', 'LOC_LONG'))
+
+    graph = ox.graph.graph_from_place("Montreal, Canada", network_type="drive")
+    # fig, ax = ox.plot.plot_graph(graph)
+
+    coord_list = []
+    for node, data in graph.nodes(data=True):
+        coord = {'LOC_LAT': data['y'], 'LOC_LONG': data['x']}
+    #     latitude = data['y']  # Latitude
+    #     longitude = data['x'] # Longitude
+    #     print(f"Node {node}: Lat={latitude}, Lon={longitude}")
+        coord_list.append(coord)
+    neg =  pd.DataFrame(coord_list)
+    print( "\n Coordinates: ", neg.shape)
+    print(neg.head(5))
+
+
+
 
     # Save df
-    save_processed(df)
-
-    # print(df.shape)
-
-    # check variables types
-    # pd.set_option('display.max_rows', None)
-    # print("\nData types:\n", df.dtypes)
-    # pd.reset_option('display.max_rows') 
+    save_processed(accidents)
 
 if __name__ == "__main__":
     main()
