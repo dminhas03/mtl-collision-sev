@@ -128,6 +128,11 @@ def encode(df):
 
 def get_road_points(spacing_m=100,location="Montréal, Quebec, Canada", max_points=None):
     """
+    Parameters:
+        - spacing_m : spacing between points simulated on each street
+        - location  : location of street network
+        - max_points: max # of points to collect
+
     Use OSMNX to get graph of Montreal's street network.
     Use edges between graph nodes to simulate street coordinates for our negative case.
     """
@@ -166,6 +171,11 @@ def get_road_points(spacing_m=100,location="Montréal, Quebec, Canada", max_poin
 
 def sample_negative_coords(road_points_df: pd.DataFrame, n_neg: int, rng=42):
     """
+    Parameters:
+        - road_points_df: dataframe with road points collected
+        - n_neg         : # of negative points we want
+        - rng           : random seed
+
     Randomly sample N coordinates from the road points pool.
     Returns a DataFrame with LOC_LAT, LOC_LONG, is_accident=0.
     """
@@ -177,11 +187,21 @@ def sample_negative_coords(road_points_df: pd.DataFrame, n_neg: int, rng=42):
     return neg
 
 def month_to_season(m):
+    """
+    Parameters:
+        - m: Month
+    Create season var using month var.
+    """
+
     # 1=winter, 2=spring, 3=summer, 4=fall
     return int(((m % 12) // 3) + 1)
 
 def build_season_pools(df_pos, cols):
     """
+        Parameters:
+        - df_pos: dataframe with positive cases (accidents)
+        - cols  : list of columns 
+
     For each column in `cols`, build value pools per season from positives.
     Returns: {col: {season: np.array(values)}, 'overall': {col: np.array(values)}}.
     """
@@ -196,7 +216,16 @@ def build_season_pools(df_pos, cols):
     return pools
 
 def sample_from_pool(pools, col, season, size, rng):
-    """Sample `size` values for `col` using the season pool if available, else overall."""
+    """
+    Parameters:
+        - pools  : dict of pools built by build_season_pools
+                    Structure: {col: {season: np.array(values)}, 'overall': {col: np.array(values)}}.
+        - col    : column name to sample values for
+        - season : season identifier (1=winter, 2=spring, 3=summer, 4=fall)
+        - size   : number of values to sample
+        - rng    : np.random.RandomState for reproducibility
+
+    Sample `size` values for `col` using the season pool if available, else overall."""
     if season in pools[col] and len(pools[col][season]) > 0:
         base = pools[col][season]
     else:
@@ -206,6 +235,12 @@ def sample_from_pool(pools, col, season, size, rng):
 
 def negative_cases(df_pos, spacing_m=100, ratio=1.0, seed=42):
     """
+        Parameters:
+        - df_pos    : dataframe with positive cases (accidents)
+        - spacing_m : Spacing between each point simulated on each street
+        - ratio     : ratio between negative and positive cases
+        - seed      : Random seed
+
     Create negatives:
         - coordinates sampled on roads,
         - time sampled from positives (then flags recomputed),
