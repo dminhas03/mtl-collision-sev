@@ -3,13 +3,24 @@ This project investigates whether **machine learning models** can predict road c
 
 The pipeline integrates spatial, temporal, and contextual features (engineered with OSMnx and domain knowledge) to model collision risk. Logistic Regression serves as a baseline, while Random Forest achieves **91% AUROC**, significantly outperforming baseline methods.
 
+---
+## Repository Structure
+
+- **data/** — raw and processed datasets (CSV, Parquet)  
+- **exploration/** — exploratory scripts and data understanding  
+- **reports/figures/** — saved plots and visualizations  
+- **src/** — reusable source code  
+  - `data_preparation.py` — preprocessing and feature engineering  
+  - `modeling.py` — training, evaluation, and model comparison  
+  - `utils_io.py` — helper functions for loading/saving data  
+- **requirements.txt** — list of Python dependencies  
+- **README.md** — project overview and results
 
 ---
 
 ## How to Run  
 
-First install the dependencies listed in `requirements.txt`, you can run the data preparation and modeling scripts in `src/` to regenerate the processed dataset,  
-train the models, and reproduce all the evaluation figures in `reports/figures/`.  
+First install the dependencies listed in `requirements.txt`, you can run the data preparation and modeling scripts in `src/` to regenerate the processed dataset, train the models, and reproduce all the evaluation figures in `reports/figures/`.  
 
 ---
 ## 📊 Results
