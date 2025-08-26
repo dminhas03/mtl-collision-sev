@@ -1,7 +1,7 @@
 # Montreal Collision Severity Project
-This project investigates whether machine learning models can predict road collisions in Montréal using 200K+ real-world traffic reports.
+This project investigates whether **machine learning models** can predict road collisions in Montréal using **200K+ real-world traffic reports**. By modeling the relationship between road conditions, time, and location, the project highlights high-risk areas and time periods, offering insights that can support urban planning and public safety interventions.
 
-The pipeline integrates spatial, temporal, and contextual features (engineered with OSMnx and domain knowledge) to model collision risk. Logistic Regression serves as a baseline, while Random Forest achieves 91% AUROC, significantly outperforming baseline methods.
+The pipeline integrates spatial, temporal, and contextual features (engineered with OSMnx and domain knowledge) to model collision risk. Logistic Regression serves as a baseline, while Random Forest achieves **91% AUROC**, significantly outperforming baseline methods.
 
 
 ---
