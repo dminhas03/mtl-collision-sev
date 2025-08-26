@@ -1,7 +1,9 @@
+import folium
 import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from folium.plugins import HeatMap
 from src.utils_io import load_processed
 from sklearn.preprocessing import StandardScaler
 from sklearn.calibration import calibration_curve
@@ -231,6 +233,28 @@ def main():
 
     # plot curves (ROC and PR)
     plot_curves(y_test, lr_prob, rf_prob, y_pred_lr=lr_pred, y_pred_rf=rf_pred, save_dir="reports/figures", show=True)
+
+
+    df = pd.read_parquet("data/collisions_processed.parquet")
+
+    # If your processed file contains both positive (1) and synthetic negative (0)
+    # this shows only *actual collisions*:
+    acc = df[df["is_accident"] == 1].copy()
+
+    # Basic sanity filter (optional)
+    acc = acc.dropna(subset=["LOC_LAT", "LOC_LONG"])
+    acc = acc[(acc["LOC_LAT"].between(45.3, 45.8)) & (acc["LOC_LONG"].between(-74.1, -73.3))]
+
+    # Center on Montréal
+    m = folium.Map(location=[45.51, -73.64], zoom_start=11, control_scale=True)
+
+    # Heatmap expects [lat, lon, weight] rows
+    heat_data = acc[["LOC_LAT", "LOC_LONG"]].values.tolist()
+    HeatMap(heat_data, radius=7, blur=10, max_zoom=15).add_to(m)
+
+    m.save("reports/figures/collision_heatmap.html")
+    print("Saved: reports/figures/collision_heatmap.html")
+
 
 if __name__ == "__main__":
     main()
