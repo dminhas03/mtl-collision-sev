@@ -6,6 +6,12 @@ The pipeline integrates spatial, temporal, and contextual features (engineered w
 
 ---
 
+## How to Run  
+
+First install the dependencies listed in `requirements.txt`, you can run the data preparation and modeling scripts in `src/` to regenerate the processed dataset,  
+train the models, and reproduce all the evaluation figures in `reports/figures/`.  
+
+---
 ## 📊 Results
 
 ### Geospatial Visualization
@@ -34,7 +40,7 @@ This highlights high-risk areas such as downtown Montréal and major intersectio
 
 ---
 
-## TTechnical Details
+## Technical Details
 - **Language & Libraries**: Python, scikit-learn, pandas, numpy, matplotlib, OSMnx, Folium  
 - **Models**: Logistic Regression, Random Forest  
 - **Evaluation Metrics**: ROC-AUC, PR-AUC, Calibration, Confusion Matrices  
