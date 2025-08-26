@@ -59,13 +59,6 @@ This highlights high-risk areas such as downtown Montréal and major intersectio
 
 ---
 
-##  Why This Matters
-- **Urban planning**: identify high-risk intersections and corridors.  
-- **Public safety**: support proactive interventions based on risk profiles.  
-- **Applied ML**: real-world example of classification, feature engineering, and model interpretability.  
-
----
-
 ##  Status
 This is an **ongoing project**. Current focus is on robust evaluation and exploratory visualization; extensions to deployment and predictive risk mapping are planned.  
 
