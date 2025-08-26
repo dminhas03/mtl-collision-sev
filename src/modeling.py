@@ -234,14 +234,10 @@ def main():
     # plot curves (ROC and PR)
     plot_curves(y_test, lr_prob, rf_prob, y_pred_lr=lr_pred, y_pred_rf=rf_pred, save_dir="reports/figures", show=True)
 
-
+    # Plot heatmap of actual collisions, for descriptive purposes
     df = pd.read_parquet("data/collisions_processed.parquet")
-
-    # If your processed file contains both positive (1) and synthetic negative (0)
-    # this shows only *actual collisions*:
     acc = df[df["is_accident"] == 1].copy()
 
-    # Basic sanity filter (optional)
     acc = acc.dropna(subset=["LOC_LAT", "LOC_LONG"])
     acc = acc[(acc["LOC_LAT"].between(45.3, 45.8)) & (acc["LOC_LONG"].between(-74.1, -73.3))]
 
