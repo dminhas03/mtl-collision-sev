@@ -1,6 +1,6 @@
-from pathlib import Path
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import matplotlib.pyplot as plt
 from src.utils_io import load_processed
 from sklearn.preprocessing import StandardScaler
