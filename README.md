@@ -68,8 +68,4 @@ This highlights high-risk areas such as downtown Montréal and major intersectio
 - Experimenting with deep learning models for spatio-temporal prediction.  
 - Possible deployment via Streamlit/Dash for interactive exploration.  
 
----
-
-##  Status
-This is an **ongoing project**. Current focus is on robust evaluation and exploratory visualization; extensions to deployment and predictive risk mapping are planned.  
 
